@@ -68,6 +68,9 @@ This package is the RL baseline layer.
 
 - `agents/config.py`
   - `PPOTrainingConfig`: stores stable-baselines3 PPO hyperparameters.
+- `agents/institutional.py`
+  - `BaseInstitutionalAgent`: abstract interface for deterministic fast-lane agents.
+  - `MeanReversionMarketMaker`: posts passive spread-capture quotes in calm markets and aggressive counter-orders when price deviates from its moving average.
 - `agents/train_ppo.py`
   - `build_environment(...)`: wraps a concrete matching engine in `MarketEnv`.
   - `build_model(...)`: creates the PPO model.
@@ -87,8 +90,9 @@ This package holds the slow-lane LLM retail trader logic.
 - `swarm/prompts.py`
   - Builds a persona-specific system prompt and a user prompt containing market snapshot plus news.
 - `swarm/client.py`
-  - `GroqAsyncClient` is a thin `aiohttp` wrapper around Groq chat completions.
-  - `GroqClientConfig` centralizes model name, base URL, timeout, temperature, and `GROQ_API_KEY`.
+  - `AsyncLLMClient` defines the shared client contract used by the swarm manager.
+  - `GroqAsyncClient`, `OllamaAsyncClient`, and `OpenAICompatibleAsyncClient` provide switchable backends.
+  - Provider config models centralize model name, base URL, timeout, temperature, and optional API keys.
 - `swarm/manager.py`
   - `SwarmManager` uses `asyncio.gather(...)` to call all persona agents concurrently.
   - Validates every returned JSON payload before converting it into normalized `Order` objects.
@@ -101,6 +105,8 @@ This package is the middleware between the two timescales.
   - `SimulationOrchestrator` advances the LOB for `fast_ticks_per_cycle`.
   - It then snapshots the market, sends that state and a news string to the LLM swarm, and injects the resulting orders back into the engine.
   - It collects cycle-level metrics and can export them as CSV using `pandas`.
+- `sim/run_experiment.py`
+  - Provides a unified experiment harness with scenarios, checkpoints, structured metrics, and run directories under `runs/`.
 
 ## Data Models And Why They Matter
 
@@ -168,16 +174,17 @@ This separation makes it easier to experiment with:
 - persona perturbations,
 - and stronger output constraints for production-grade validation.
 
-### Groq Integration
+### Provider Integration
 
-`GroqAsyncClient` uses `aiohttp` so swarm calls remain non-blocking. The client:
+The swarm layer now uses a provider-agnostic async client interface so the same `SwarmManager` can work with:
 
-- reads `GROQ_API_KEY` from the environment by default,
-- targets the Groq chat completion endpoint,
-- requests JSON object formatting,
-- and returns a Python dictionary that is later validated by Pydantic.
+- `Groq` for hosted inference,
+- `Ollama` for local Llama 3 testing,
+- and OpenAI-compatible local servers such as LM Studio, vLLM, or `llama.cpp`.
 
-This validation layer is important because LLM responses are not trusted until they pass `LLMOrderResponse`.
+All providers share the same JSON validation path. Each client uses `aiohttp` and returns a Python dictionary that is then validated by `LLMOrderResponse`.
+
+This keeps the local and hosted testing paths aligned: prompts, persona logic, and output validation do not change when you switch providers.
 
 ## Two-Speed Orchestration
 
@@ -255,15 +262,14 @@ This is enough to establish experiment traces before introducing richer PnL, inv
 This baseline is intentionally not a full runnable market simulator yet. The following integration points still require project-specific work:
 
 - wiring the supervisor-provided matching engine to `MatchingEngineProtocol`,
-- deciding the final RL reward function and episode semantics,
+- refining the current RL reward and metrics beyond the first meaningful accounting pass,
 - deciding whether swarm outputs should remain market-only or become mixed market/limit flow,
-- adding persistence for order book state snapshots,
-- and deciding how the fast-lane RL agent and slow-lane swarm coexist within a shared experiment harness.
+- and upgrading the current experiment harness from mock-backed validation into real-LOB research runs.
 
 ## Recommended Next Steps
 
-1. Create an adapter around the supervisor's matching engine that implements `reset()`, `advance()`, `submit_order()`, and `get_snapshot()`.
-2. Replace the placeholder reward in `MarketEnv` with a task-aligned objective.
-3. Add a small deterministic fake matching engine for local tests and smoke runs.
-4. Add experiment scripts that instantiate `SwarmManager`, `SimulationOrchestrator`, and PPO training from one reproducible config.
-5. Expand the market snapshot schema if you need richer RL observations such as queue position, recent trades, realized volatility, or news embeddings.
+1. Create a real adapter around the supervisor's matching engine that implements `reset()`, `advance()`, `submit_order()`, and `get_snapshot()`.
+2. Expand the reward and evaluation metrics with execution-aware objectives and richer PnL attribution.
+3. Add named experiment scenarios and benchmark suites for fast-lane and slow-lane ablations.
+4. Expand the market snapshot schema if you need richer RL observations such as queue position, recent trades, realized volatility, or news embeddings.
+5. Add experiment dashboards or analysis notebooks on top of the structured `runs/` artifacts.

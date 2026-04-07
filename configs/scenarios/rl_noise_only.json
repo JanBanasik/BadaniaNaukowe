@@ -1,0 +1,14 @@
+{
+  "scenario_name": "rl_noise_only",
+  "enable_institutional_agent": false,
+  "enable_swarm": false,
+  "swarm_provider": "mock",
+  "agent_count": 0,
+  "num_cycles": 30,
+  "swarm_update_freq": 10,
+  "env": {
+    "noise_bid_lambda": 3.0,
+    "noise_ask_lambda": 3.0,
+    "noise_warmup_steps": 2
+  }
+}

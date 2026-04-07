@@ -1,0 +1,12 @@
+{
+  "scenario_name": "rl_institutional_noise",
+  "enable_institutional_agent": true,
+  "enable_swarm": false,
+  "swarm_provider": "mock",
+  "agent_count": 0,
+  "num_cycles": 30,
+  "swarm_update_freq": 10,
+  "institution_window": 5,
+  "institution_threshold": 0.05,
+  "institution_order_size": 5.0
+}

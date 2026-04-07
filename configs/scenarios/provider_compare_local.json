@@ -1,0 +1,10 @@
+{
+  "scenario_name": "provider_compare_local",
+  "enable_institutional_agent": true,
+  "enable_swarm": true,
+  "swarm_provider": "lmstudio",
+  "agent_count": 6,
+  "num_cycles": 20,
+  "swarm_update_freq": 4,
+  "market_news": "A surprise macro headline triggers conflicting retail sentiment across the market."
+}

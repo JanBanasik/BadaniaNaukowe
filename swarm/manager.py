@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import Iterable
 
 from core.models import AgentDecision, MarketSnapshot, Order
-from swarm.client import GroqAsyncClient
+from swarm.client import AsyncLLMClient
 from swarm.models import LLMOrderResponse, RetailPersona
 from swarm.personas import generate_personas
 from swarm.prompts import build_system_prompt, build_user_prompt
@@ -17,7 +17,7 @@ class SwarmManager:
 
     def __init__(
         self,
-        client: GroqAsyncClient,
+        client: AsyncLLMClient,
         personas: Iterable[RetailPersona] | None = None,
         agent_count: int = 50,
     ) -> None:

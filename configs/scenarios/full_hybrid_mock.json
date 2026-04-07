@@ -1,0 +1,10 @@
+{
+  "scenario_name": "full_hybrid_mock",
+  "enable_institutional_agent": true,
+  "enable_swarm": true,
+  "swarm_provider": "mock",
+  "agent_count": 5,
+  "num_cycles": 30,
+  "swarm_update_freq": 5,
+  "market_news": "Inflation data slightly beats expectations while equity futures stay range-bound."
+}

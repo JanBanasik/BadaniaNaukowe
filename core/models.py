@@ -131,3 +131,13 @@ class SimulationConfig(BaseModel):
     rl_order_size: float = Field(default=1.0, gt=0.0)
     swarm_agent_count: int = Field(default=50, ge=1, le=100)
     default_market_news: str = "No exogenous market news."
+    noise_bid_lambda: float = Field(default=3.0, ge=0.0)
+    noise_ask_lambda: float = Field(default=3.0, ge=0.0)
+    noise_price_scale: float = Field(default=0.5, gt=0.0)
+    noise_min_distance: float = Field(default=0.01, ge=0.0)
+    noise_min_volume: float = Field(default=1.0, gt=0.0)
+    noise_max_volume: float = Field(default=100.0, gt=0.0)
+    noise_warmup_steps: int = Field(default=10, ge=0)
+    reward_inventory_penalty: float = Field(default=0.001, ge=0.0)
+    transaction_cost_bps: float = Field(default=0.0, ge=0.0)
+    random_seed: int | None = None
