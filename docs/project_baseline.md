@@ -206,14 +206,33 @@ One cycle follows this sequence:
 
 ```mermaid
 flowchart TD
-    fastLane[FastLaneTicks] --> snapshot[MarketSnapshot]
-    snapshot --> slowLane[SwarmManager]
-    marketNews[MarketNews] --> slowLane
-    slowLane --> decisions[ValidatedDecisions]
-    decisions --> orders[SwarmOrders]
-    orders --> inject[InjectAsMarketOrders]
-    inject --> fastLane
+    subgraph fastLane[Fast Lane per tick]
+        rlAgent[RL Agent] --> lob[Matching Engine]
+        institutional[Institutional MM] --> lob
+        accumulation[Accumulation Investor] --> lob
+        noise[Poisson Noise] --> lob
+        stopQueue[Stop Order Queue] --> lob
+        lob --> phases[Session Phase Manager]
+        phases --> lob
+    end
+    lob --> snapshot[MarketSnapshot + phase + tick]
+    snapshot --> orchestrator[SimulationOrchestrator]
+    newsFeed[NewsFeed / External Events] --> orchestrator
+    orchestrator -->|every N cycles or on event| slowLane[SwarmManager]
+    marketNews[Market News string] --> slowLane
+    slowLane --> decisions[Validated AgentDecisions]
+    decisions --> orders[Swarm Orders]
+    orders --> broker[Broker / CommissionModel]
+    broker --> inject[Inject into LOB]
+    inject --> lob
 ```
+
+The diagram reflects the extended system after the April 2026 supervisor
+feedback round: stop-order wrappers, accumulation investors, the session
+phase manager with opening and closing auctions, the broker commission
+layer, and the external news feed are all wired into the same orchestrator
+loop. Orders carry `price_type ∈ {market, limit, stop_market, stop_limit}`,
+`time_in_force ∈ {GTC, IOC, FOK, GTD}`, and an optional `expiry_tick`.
 
 ### Why Force Market Orders On Injection?
 
