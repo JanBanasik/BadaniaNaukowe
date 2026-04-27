@@ -237,15 +237,37 @@ The clean architecture for experiments is:
 
 ```mermaid
 flowchart TD
-    rlAgent[RLAgent] --> lob[LimitOrderBook]
-    institutionAgent[InstitutionalAgent] --> lob
-    noiseAgent[ZeroIntelligenceNoise] --> lob
-    lob --> snapshot[MarketSnapshot]
-    marketNews[MarketNews] --> swarm[LLMSwarm]
+    rlAgent[RL Agent] --> lob[Python LOB Engine]
+    institutionAgent[Institutional MM] --> lob
+    accumulation[Accumulation Investor<br/>DCA every 5 sessions] --> lob
+    noiseAgent[Zero-Intelligence Noise] --> lob
+    stopQueue[Stop Order Queue<br/>stop_market / stop_limit] -->|released on trigger| lob
+    phases[Session Phase Manager<br/>opening auction / continuous / closing auction] -->|phase gating| lob
+    lob -->|fills - commission| broker[Broker / CommissionModel<br/>max(bps, min_fee)]
+    broker --> lob
+    lob --> snapshot[MarketSnapshot + phase]
+    newsFeed[News Feed<br/>exogenous events e.g. tweets] --> swarm[LLM Swarm]
+    marketNews[Default Market News] --> swarm
     snapshot --> swarm
-    swarm --> retailOrders[RetailSwarmOrders]
-    retailOrders --> lob
+    swarm --> retailOrders[Retail Swarm Orders<br/>w/ time_in_force, optional limit]
+    retailOrders --> broker
 ```
+
+Notes on the updated architecture:
+
+- the LOB is a native Python port of the MASfSES-JADE matching engine
+  (price-time priority, two-phase NoLimit → Limit matching),
+- orders carry extended `price_type`, `time_in_force`, `stop_price`,
+  `expiry_tick` fields so the engine can handle GTD pruning and stop triggering,
+- the accumulation investor emits one small market-buy every
+  `accumulation_days * cycles_per_session` cycles and skips auction windows,
+- the session phase manager runs opening/closing call auctions and rejects
+  orders during `closed` / `pre_open`,
+- the commission layer deducts `max(volume * price * bps / 10_000, min_fee)`
+  at every fill so that transactions on a spread smaller than the commission
+  stop being profitable,
+- the news feed lets external events (e.g. a Trump tweet) interrupt the
+  regular `swarm_update_freq` cadence and feed the swarm out of band.
 
 This means:
 
